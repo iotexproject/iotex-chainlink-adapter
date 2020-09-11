@@ -59,6 +59,6 @@ func (a *Adopter) Handle(req Request) (string, error) {
 	if err := a.connect(); err != nil {
 		return "", err
 	}
-	// TODO construct and make contract call here
-	return "", nil
+	// TODO construct and make contract call here and return action hash in hex
+	return "succeed", nil
 }
