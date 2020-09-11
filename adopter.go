@@ -18,8 +18,7 @@ type AdopterConfig struct {
 }
 
 type Adopter struct {
-	mu *sync.RWMutex
-
+	mu       *sync.RWMutex
 	grpcConn *grpc.ClientConn
 	client   iotexapi.APIServiceClient
 	cfg      *AdopterConfig
@@ -32,6 +31,7 @@ func NewAdopter(cfg *AdopterConfig) (*Adopter, error) {
 		return nil, err
 	}
 	return &Adopter{
+		mu:      &sync.RWMutex{},
 		cfg:     cfg,
 		account: acc,
 	}, nil
