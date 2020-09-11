@@ -11,24 +11,24 @@ import (
 type HandleFunc func(req Request) (string, error)
 
 type Request struct {
-	JobID string `json:"id"`
-	Data  Data   `json:"data"`
+	JobID string `json:"id,omitempty"`
+	Data  Data   `json:"data,omitempty"`
 }
 
 // [address:mm dataPrefix:qq functionSelector:aa result:0x00000000000000000000000000000000000000000000000000000000000fc646]
 type Data struct {
-	ContractAddress string      `json:"address"`
-	DataPrefix      string      `json:"dataPrefix"`
-	Function        string      `json:"functionSelector"`
-	Result          interface{} `json:"result"`
+	ContractAddress string      `json:"address,omitempty"`
+	DataPrefix      string      `json:"dataPrefix,omitempty"`
+	Function        string      `json:"functionSelector,omitempty"`
+	Result          interface{} `json:"result,omitempty"`
 }
 
 type Response struct {
-	JobRunID   string `json:"jobRunID"`
-	StatusCode int    `json:"status_code"`
-	Status     string `json:"status"`
-	Data       string `json:"data"`
-	Error      string `json:"error"`
+	JobRunID   string `json:"jobRunID,omitempty"`
+	StatusCode int    `json:"status_code,omitempty"`
+	Status     string `json:"status,omitempty"`
+	Data       Data   `json:"data,omitempty"`
+	Error      string `json:"error,omitempty"`
 }
 
 func validateRequest(r *Request) error {
@@ -74,7 +74,7 @@ func NewServerRouter(handler HandleFunc) *gin.Engine {
 			JobRunID:   req.JobID,
 			StatusCode: http.StatusOK,
 			Status:     "success",
-			Data:       res,
+			Data:       Data{Result: res},
 		})
 	})
 	return r
