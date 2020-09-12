@@ -17,33 +17,33 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type AdopterConfig struct {
+type AdapterConfig struct {
 	PrivateKey     string
 	Endpoint       string
 	SecureEndpoint bool
 }
 
-type Adopter struct {
+type Adapter struct {
 	mu       *sync.RWMutex
 	grpcConn *grpc.ClientConn
 	api      iotexapi.APIServiceClient
-	cfg      *AdopterConfig
+	cfg      *AdapterConfig
 	account  account.Account
 }
 
-func NewAdopter(cfg *AdopterConfig) (*Adopter, error) {
+func NewAdapter(cfg *AdapterConfig) (*Adapter, error) {
 	acc, err := account.HexStringToAccount(cfg.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
-	return &Adopter{
+	return &Adapter{
 		mu:      &sync.RWMutex{},
 		cfg:     cfg,
 		account: acc,
 	}, nil
 }
 
-func (a *Adopter) connect() (err error) {
+func (a *Adapter) connect() (err error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	// Check if the existing connection is good.
@@ -61,7 +61,7 @@ func (a *Adopter) connect() (err error) {
 	return err
 }
 
-func (a *Adopter) Handle(ctx context.Context, req Request) (string, error) {
+func (a *Adapter) Handle(ctx context.Context, req Request) (string, error) {
 	if err := a.connect(); err != nil {
 		return "", err
 	}
@@ -79,7 +79,7 @@ func (a *Adopter) Handle(ctx context.Context, req Request) (string, error) {
 	return a.callContract(ctx, exec)
 }
 
-func (a *Adopter) callContract(ctx context.Context, exec *iotextypes.Execution) (string, error) {
+func (a *Adapter) callContract(ctx context.Context, exec *iotextypes.Execution) (string, error) {
 	// get nonce
 	nonceResp, err := a.api.GetAccount(ctx, &iotexapi.GetAccountRequest{Address: a.account.Address().String()})
 	if err != nil {

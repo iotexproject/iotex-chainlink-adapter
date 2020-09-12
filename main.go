@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	cfg := &AdopterConfig{
+	cfg := &AdapterConfig{
 		PrivateKey: os.Getenv("IO_PRIVATE_KEY"),
 		Endpoint:   os.Getenv("IO_ENDPOINT"),
 	}
@@ -14,17 +14,17 @@ func main() {
 		cfg.SecureEndpoint = true
 	}
 
-	port := os.Getenv("IO_ADOPTER_PORT")
+	port := os.Getenv("IO_ADAPTER_PORT")
 	if port == "" {
 		port = "80"
 	}
 
-	adopter, err := NewAdopter(cfg)
+	adapter, err := NewAdapter(cfg)
 	if err != nil {
-		log.Fatalln("Failed to new adopter: ", err)
+		log.Fatalln("Failed to new adapter: ", err)
 	}
 
-	r := NewServerRouter(adopter.Handle)
+	r := NewServerRouter(adapter.Handle)
 	if err := r.Run(":" + port); err != nil {
 		log.Println("HTTP server shutdown: ", err)
 	}
