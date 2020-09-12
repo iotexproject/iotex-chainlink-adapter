@@ -33,7 +33,11 @@ type Response struct {
 }
 
 func validateRequest(r *Request) error {
-	if r.JobID == "" || r.Data.Function == "" || r.Data.ContractAddress == "" {
+	if r.JobID == "" ||
+		r.Data.Function == "" ||
+		r.Data.ContractAddress == "" ||
+		r.Data.DataPrefix == "" ||
+		r.Data.Result == "" {
 		return errors.New("missing required field(s)")
 	}
 	return nil
