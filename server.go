@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"log"
 	"net/http"
@@ -8,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type HandleFunc func(req Request) (string, error)
+type HandleFunc func(ctx context.Context, req Request) (string, error)
 
 type Request struct {
 	JobID string `json:"id,omitempty"`
@@ -17,10 +18,10 @@ type Request struct {
 
 // [address:mm dataPrefix:qq functionSelector:aa result:0x00000000000000000000000000000000000000000000000000000000000fc646]
 type Data struct {
-	ContractAddress string      `json:"address,omitempty"`
-	DataPrefix      string      `json:"dataPrefix,omitempty"`
-	Function        string      `json:"functionSelector,omitempty"`
-	Result          interface{} `json:"result,omitempty"`
+	ContractAddress string `json:"address,omitempty"`
+	DataPrefix      string `json:"dataPrefix,omitempty"`
+	Function        string `json:"functionSelector,omitempty"`
+	Result          string `json:"result,omitempty"`
 }
 
 type Response struct {
@@ -52,6 +53,7 @@ func errorResponse(c *gin.Context, statusCode int, jobID, errMsg string) {
 
 func NewServerRouter(handler HandleFunc) *gin.Engine {
 	r := gin.Default()
+
 	r.POST("/", func(c *gin.Context) {
 		var req Request
 		if err := c.BindJSON(&req); err != nil {
@@ -63,7 +65,7 @@ func NewServerRouter(handler HandleFunc) *gin.Engine {
 			return
 		}
 
-		res, err := handler(req)
+		res, err := handler(c.Request.Context(), req)
 		if err != nil {
 			log.Println("Handler error: ", err)
 			errorResponse(c, http.StatusInternalServerError, req.JobID, "")
@@ -75,6 +77,25 @@ func NewServerRouter(handler HandleFunc) *gin.Engine {
 			StatusCode: http.StatusOK,
 			Status:     "success",
 			Data:       Data{Result: res},
+		})
+	})
+
+	r.POST("/test", func(c *gin.Context) {
+		var req Request
+		if err := c.BindJSON(&req); err != nil {
+			errorResponse(c, http.StatusBadRequest, req.JobID, "Invalid JSON payload")
+			return
+		}
+		if err := validateRequest(&req); err != nil {
+			errorResponse(c, http.StatusBadRequest, req.JobID, err.Error())
+			return
+		}
+		log.Printf("incoming request: %+v", req)
+		c.JSON(http.StatusOK, Response{
+			JobRunID:   req.JobID,
+			StatusCode: http.StatusOK,
+			Status:     "success",
+			Data:       Data{Result: "success"},
 		})
 	})
 	return r
