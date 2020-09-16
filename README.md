@@ -1,5 +1,12 @@
 # iotex-chainlink-adapter
 
+### Running
+- Install Go dependencies `go install`
+
+- Build executable `go build`
+
+- Run `./iotex-chainlink-adapter`
+
 ### Environment variables
 
 | Key | Description | Example |
