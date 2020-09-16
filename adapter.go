@@ -91,6 +91,7 @@ func (a *Adapter) callContract(ctx context.Context, exec *iotextypes.Execution) 
 		Action: &iotextypes.ActionCore_Execution{
 			Execution: exec,
 		},
+		GasLimit: 15000000,
 	}
 
 	// get gaslimit
