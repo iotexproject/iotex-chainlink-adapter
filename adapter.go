@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/iotexproject/iotex-antenna-go/v2/account"
 	"github.com/iotexproject/iotex-proto/golang/iotexapi"
@@ -17,18 +18,46 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+const _minimumConsumerGasLimit = uint64(600000)
+
 type AdapterConfig struct {
 	PrivateKey     string
 	Endpoint       string
 	SecureEndpoint bool
 }
 
+type nonceKeeper struct {
+	sync.Mutex
+
+	address string
+
+	nextPending uint64
+	lastSync    time.Time
+}
+
+func (n *nonceKeeper) NextPending(ctx context.Context, api iotexapi.APIServiceClient) (uint64, error) {
+	n.Lock()
+	defer n.Unlock()
+	if time.Now().After(n.lastSync.Add(15 * time.Second)) {
+		nonceResp, err := api.GetAccount(ctx, &iotexapi.GetAccountRequest{Address: n.address})
+		if err != nil {
+			return 0, err
+		}
+		n.nextPending = nonceResp.GetAccountMeta().GetPendingNonce()
+		n.lastSync = time.Now()
+	}
+	ret := n.nextPending
+	n.nextPending += 1
+	return ret, nil
+}
+
 type Adapter struct {
-	mu       *sync.RWMutex
-	grpcConn *grpc.ClientConn
-	api      iotexapi.APIServiceClient
-	cfg      *AdapterConfig
-	account  account.Account
+	mu          *sync.RWMutex
+	grpcConn    *grpc.ClientConn
+	api         iotexapi.APIServiceClient
+	cfg         *AdapterConfig
+	account     account.Account
+	nonceKeeper *nonceKeeper
 }
 
 func NewAdapter(cfg *AdapterConfig) (*Adapter, error) {
@@ -40,6 +69,9 @@ func NewAdapter(cfg *AdapterConfig) (*Adapter, error) {
 		mu:      &sync.RWMutex{},
 		cfg:     cfg,
 		account: acc,
+		nonceKeeper: &nonceKeeper{
+			address: acc.Address().String(),
+		},
 	}, nil
 }
 
@@ -81,17 +113,18 @@ func (a *Adapter) Handle(ctx context.Context, req Request) (string, error) {
 
 func (a *Adapter) callContract(ctx context.Context, exec *iotextypes.Execution) (string, error) {
 	// get nonce
-	nonceResp, err := a.api.GetAccount(ctx, &iotexapi.GetAccountRequest{Address: a.account.Address().String()})
+
+	nonce, err := a.nonceKeeper.NextPending(ctx, a.api)
 	if err != nil {
 		return "", err
 	}
 
 	core := &iotextypes.ActionCore{
-		Nonce: nonceResp.GetAccountMeta().GetPendingNonce(),
+		Nonce: nonce,
 		Action: &iotextypes.ActionCore_Execution{
 			Execution: exec,
 		},
-		GasLimit: 15000000,
+		GasLimit: 10000000,
 	}
 
 	// get gaslimit
@@ -103,7 +136,7 @@ func (a *Adapter) callContract(ctx context.Context, exec *iotextypes.Execution) 
 	if err != nil {
 		return "", err
 	}
-	core.GasLimit = gasLimitResp.GetGas()
+	core.GasLimit = gasLimitResp.GetGas() + _minimumConsumerGasLimit
 
 	// get gasprice
 	gasPriceResp, err := a.api.SuggestGasPrice(ctx, &iotexapi.SuggestGasPriceRequest{})
